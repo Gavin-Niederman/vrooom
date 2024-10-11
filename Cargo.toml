@@ -1,0 +1,16 @@
+[package]
+name = "vrooom"
+description = "Simple no-std algorithms for robotics."
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+libm = { version = "0.2.8", optional = true }
+vexide-core = { version = "0.4.1", optional = true }
+[features]
+default = ["libm"]
+
+std = []
+
+libm = ["dep:libm"]
+vexide-core = ["dep:vexide-core"]
