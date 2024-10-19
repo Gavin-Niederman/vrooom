@@ -20,34 +20,56 @@ pub struct PidController {
 }
 impl PidController {
     /// Creates a new PID controller with the given constants.
+    /// 
     /// # Note
+    /// 
     /// It is not recommended to use the `ki` constant in a PID controller as it can add instability.
     /// Unless absolutely necessary, use [`Self::new_pd`].
     /// If you do use `ki`, make sure to set `i_zone` to `Some(value)` to prevent integral windup.
     pub fn new_pid(kp: f64, ki: f64, kd: f64, i_zone: Option<f64>) -> Self {
-        PidController { kp, ki, kd, integrator_zone: i_zone, last_position: 0.0, i: 0.0 }
+        PidController {
+            kp,
+            ki,
+            kd,
+            integrator_zone: i_zone,
+            last_position: 0.0,
+            i: 0.0,
+        }
     }
 
     /// Creates a new PID controller with the given `kp` and `kd` constants, ommiting `ki`.
     /// This is the recommended way to create a PID controller. However, if you need to use `ki`, use [`Self::new_pid`].
     pub fn new_pd(kp: f64, kd: f64) -> Self {
-        PidController { kp, ki: 0.0, kd, integrator_zone: None, last_position: 0.0, i: 0.0 }
+        PidController {
+            kp,
+            ki: 0.0,
+            kd,
+            integrator_zone: None,
+            last_position: 0.0,
+            i: 0.0,
+        }
     }
 
     /// Updates the PID controller with the given setpoint, position, and delta time.
+    /// 
     /// # Panics
+    /// 
     /// Panics if `dt` is 0.
     pub fn update(&mut self, setpoint: f64, position: f64, dt: f64) -> f64 {
-        assert_ne!(dt, 0.0, "PID update called with a nonsensical delta time of 0");
+        assert_ne!(
+            dt, 0.0,
+            "PID update called with a nonsensical delta time of 0"
+        );
 
         let error = setpoint - position;
 
-        if let Some(i_zone) = self.integrator_zone {
-            if error.abs() < i_zone {
-                self.i += error * dt;
-            } else {
-                self.i = 0.0;
-            }
+        // If the error is outside of the integrator zone, reset the integrator.
+        if self
+            .integrator_zone
+            .map(|i_zone| error.abs() > i_zone)
+            .unwrap_or(false)
+        {
+            self.i = 0.0;
         } else {
             self.i += error * dt;
         }
