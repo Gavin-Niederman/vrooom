@@ -1,3 +1,5 @@
+use core::time::Duration;
+
 #[cfg(not(feature = "std"))]
 use crate::math::Math as _;
 
@@ -50,18 +52,20 @@ impl PidController {
         }
     }
 
-    /// Updates the PID controller with the given setpoint, position, and delta time.
+    /// Updates the PID controller with the given setpoint, current state, and delta time.
     /// 
     /// # Panics
     /// 
     /// Panics if `dt` is 0.
-    pub fn update(&mut self, setpoint: f64, position: f64, dt: f64) -> f64 {
+    pub fn update(&mut self, setpoint: f64, state: f64, dt: Duration) -> f64 {
+        let dt = dt.as_secs_f64();
+
         assert_ne!(
             dt, 0.0,
             "PID update called with a nonsensical delta time of 0"
         );
 
-        let error = setpoint - position;
+        let error = setpoint - state;
 
         // If the error is outside of the integrator zone, reset the integrator.
         if self
@@ -76,10 +80,10 @@ impl PidController {
 
         let p = self.kp * error;
         let i = self.ki * self.i;
-        let d = self.kd * (position - self.last_position) / dt;
+        let d = self.kd * (state - self.last_position) / dt;
         let output = p + i + d;
 
-        self.last_position = position;
+        self.last_position = state;
 
         output
     }
@@ -87,29 +91,30 @@ impl PidController {
 
 #[cfg(test)]
 mod tests {
+    const SECOND: core::time::Duration = core::time::Duration::from_secs(1);
+
     #[test]
     fn update() {
         let mut pid = super::PidController::new_pid(1.0, 0.0, 0.0, None);
-
-        assert_eq!(pid.update(0.0, 0.0, 1.0), 0.0);
-        assert_eq!(pid.update(0.0, 1.0, 1.0), -1.0);
-        assert_eq!(pid.update(0.0, 0.0, 1.0), 0.0);
+        assert_eq!(pid.update(0.0, 0.0, SECOND), 0.0);
+        assert_eq!(pid.update(0.0, 1.0, SECOND), -1.0);
+        assert_eq!(pid.update(0.0, 0.0, SECOND), 0.0);
     }
 
     #[test]
     #[should_panic]
     fn update_zero_dt() {
         let mut pid = super::PidController::new_pid(1.0, 0.0, 0.0, None);
-        pid.update(0.0, 0.0, 0.0);
+        pid.update(0.0, 0.0, core::time::Duration::from_millis(0));
     }
 
     #[test]
     fn i_zone() {
         let mut pid = super::PidController::new_pid(0.0, 1.0, 0.0, Some(1.0));
 
-        assert_eq!(pid.update(0.0, 3.0, 1.0), 0.0);
-        assert_eq!(pid.update(0.0, 0.25, 1.0), -0.25);
-        assert_eq!(pid.update(0.0, 0.25, 1.0), -0.5);
-        assert_eq!(pid.update(0.0, -3.0, 1.0), 0.0);
+        assert_eq!(pid.update(0.0, 3.0, SECOND), 0.0);
+        assert_eq!(pid.update(0.0, 0.25, SECOND), -0.25);
+        assert_eq!(pid.update(0.0, 0.25, SECOND), -0.5);
+        assert_eq!(pid.update(0.0, -3.0, SECOND), 0.0);
     }
 }
