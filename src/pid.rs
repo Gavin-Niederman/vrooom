@@ -22,9 +22,9 @@ pub struct PidController {
 }
 impl PidController {
     /// Creates a new PID controller with the given constants.
-    /// 
+    ///
     /// # Note
-    /// 
+    ///
     /// It is not recommended to use the `ki` constant in a PID controller as it can add instability.
     /// Unless absolutely necessary, use [`Self::new_pd`].
     /// If you do use `ki`, make sure to set `i_zone` to `Some(value)` to prevent integral windup.
@@ -53,17 +53,16 @@ impl PidController {
     }
 
     /// Updates the PID controller with the given setpoint, current state, and delta time.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics if `dt` is 0.
     pub fn update(&mut self, setpoint: f64, state: f64, dt: Duration) -> f64 {
-        let dt = dt.as_secs_f64();
-
-        assert_ne!(
-            dt, 0.0,
+        assert!(
+            !dt.is_zero(),
             "PID update called with a nonsensical delta time of 0"
         );
+        let dt = dt.as_secs_f64();
 
         let error = setpoint - state;
 
@@ -105,7 +104,7 @@ mod tests {
     #[should_panic]
     fn update_zero_dt() {
         let mut pid = super::PidController::new_pid(1.0, 0.0, 0.0, None);
-        pid.update(0.0, 0.0, core::time::Duration::from_millis(0));
+        pid.update(0.0, 0.0, core::time::Duration::ZERO);
     }
 
     #[test]
